@@ -1,6 +1,7 @@
 package db
 
 import (
+	"errors"
 	"time"
 
 	"github.com/infectieradar-nl/self-swabbing-extension/pkg/types"
@@ -59,4 +60,25 @@ func (dbService *SelfSwabbingExtDBService) FindEntryCodeInfo(instanceID string, 
 	}
 
 	return entryCode, err
+}
+
+func (dbService *SelfSwabbingExtDBService) MarkEntryCodeAsUsed(instanceID string, code string, usedBy string) (err error) {
+	ctx, cancel := dbService.getContext()
+	defer cancel()
+
+	filter := bson.M{
+		"code": code,
+	}
+	update := bson.M{"$set": bson.M{
+		"usedAt": time.Now().Unix(),
+		"usedBy": usedBy,
+	}}
+	res, err := dbService.collectionRefEntryCodes(instanceID).UpdateOne(ctx, filter, update)
+	if err != nil {
+		return err
+	}
+	if res.ModifiedCount < 1 {
+		return errors.New("not modified")
+	}
+	return nil
 }
