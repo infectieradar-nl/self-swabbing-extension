@@ -2,7 +2,9 @@ package handlers
 
 import (
 	"fmt"
+	"io/ioutil"
 	"net/http"
+	"strings"
 
 	"github.com/coneno/logger"
 	"github.com/gin-gonic/gin"
@@ -11,11 +13,13 @@ import (
 )
 
 func (h *HttpEndpoints) AddCodeCheckerAPI(rg *gin.RouterGroup) {
-	codeCheckGroup := rg.Group("/:instanceID/entry-codes")
+	codeCheckGroup := rg.Group("/entry-codes/:instanceID")
 	codeCheckGroup.Use(mw.HasValidInstanceID())
 	codeCheckGroup.Use(mw.HasValidAPIKey(h.apiKeys))
 	{
-		codeCheckGroup.POST("", mw.RequirePayload(), h.addNewEntryCodesHandl)
+		if h.allowEntryCodeUpload {
+			codeCheckGroup.POST("", mw.RequirePayload(), h.addNewEntryCodesHandl)
+		}
 		codeCheckGroup.GET("/is-valid", h.validateEntryCodeHandl)
 		codeCheckGroup.POST("/submit", mw.RequirePayload(), h.studyEventWithEntryCodeHandl)
 	}
@@ -59,6 +63,10 @@ func (h *HttpEndpoints) validateEntryCodeHandl(c *gin.Context) {
 		return
 	}
 
+	code = strings.ReplaceAll(code, " ", "")
+	code = strings.ReplaceAll(code, "_", "")
+	code = strings.ReplaceAll(code, "-", "")
+
 	codeInfos, err := h.dbService.FindEntryCodeInfo(instanceID, code)
 	if err != nil {
 		logger.Error.Printf("error when looking up code infos for '%s': %v", code, err)
@@ -77,8 +85,29 @@ func (h *HttpEndpoints) validateEntryCodeHandl(c *gin.Context) {
 
 func (h *HttpEndpoints) studyEventWithEntryCodeHandl(c *gin.Context) {
 	// TODO: receive and parse study event
-
 	// TODO: find survey item and response item with code
-
 	// TODO: update code in DB that is was used by participant
+
+	resp, err := ioutil.ReadAll(c.Request.Body)
+
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
+			"message": "Unable to read request body",
+		})
+		return
+	}
+
+	err1 := ioutil.WriteFile("study_event.json", resp, 0644)
+
+	if err1 != nil {
+		fmt.Println("error:", err1)
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
+			"message": "Unable to save the file",
+		})
+		return
+	}
+
+	// File saved successfully. Return proper result
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Your file has been successfully saved."})
 }

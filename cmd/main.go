@@ -15,7 +15,6 @@ var conf Config
 
 func init() {
 	conf = initConfig()
-	logger.Debug.Println(conf)
 	if !conf.GinDebugMode {
 		gin.SetMode(gin.ReleaseMode)
 	}
@@ -45,7 +44,11 @@ func main() {
 	router.GET("/", healthCheckHandle)
 	apiRoot := router.Group("")
 
-	apiHandlers := handlers.NewHTTPHandler(dbService, conf.APIKeys)
+	apiHandlers := handlers.NewHTTPHandler(
+		dbService,
+		conf.APIKeys,
+		conf.AllowEntryCodeUpload,
+	)
 	apiHandlers.AddCodeCheckerAPI(apiRoot)
 
 	logger.Info.Printf("self swabbing extension is listening on port %s", conf.Port)

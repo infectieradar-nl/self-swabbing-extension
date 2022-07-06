@@ -17,6 +17,7 @@ const (
 	ENV_SELF_SWABBING_EXTENSION_LISTEN_PORT = "SELF_SWABBING_EXT_LISTEN_PORT"
 	ENV_CORS_ALLOW_ORIGINS                  = "CORS_ALLOW_ORIGINS"
 	ENV_API_KEYS                            = "API_KEYS"
+	ENV_ALLOW_ENTRY_CODE_UPLOAD             = "ALLOW_ENTRY_CODE_UPLOAD"
 
 	ENV_SELF_SWABBING_EXT_DB_CONNECTION_STR    = "SELF_SWABBING_EXT_DB_CONNECTION_STR"
 	ENV_SELF_SWABBING_EXT_DB_USERNAME          = "SELF_SWABBING_EXT_DB_USERNAME"
@@ -31,12 +32,13 @@ const (
 
 // Config is the structure that holds all global configuration data
 type Config struct {
-	GinDebugMode bool
-	Port         string
-	AllowOrigins []string
-	APIKeys      []string
-	LogLevel     logger.LogLevel
-	DBConfig     types.DBConfig
+	GinDebugMode         bool
+	Port                 string
+	AllowOrigins         []string
+	APIKeys              []string
+	AllowEntryCodeUpload bool
+	LogLevel             logger.LogLevel
+	DBConfig             types.DBConfig
 }
 
 func initConfig() Config {
@@ -45,6 +47,7 @@ func initConfig() Config {
 	conf.Port = os.Getenv(ENV_SELF_SWABBING_EXTENSION_LISTEN_PORT)
 	conf.AllowOrigins = strings.Split(os.Getenv(ENV_CORS_ALLOW_ORIGINS), ",")
 	conf.APIKeys = strings.Split(os.Getenv(ENV_API_KEYS), ",")
+	conf.AllowEntryCodeUpload = os.Getenv(ENV_ALLOW_ENTRY_CODE_UPLOAD) == "true"
 
 	conf.LogLevel = getLogLevel()
 	conf.DBConfig = getDBConfig()
