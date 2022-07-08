@@ -3,13 +3,26 @@ package handlers
 import (
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/coneno/logger"
 	"github.com/gin-gonic/gin"
 	mw "github.com/infectieradar-nl/self-swabbing-extension/pkg/http/middlewares"
 	"github.com/infectieradar-nl/self-swabbing-extension/pkg/types"
+)
+
+const (
+	wrongCodeAttemptLimit                    = 10
+	wrongCodeAttemptLimitWindowResetInterval = 5 * 60
+	randomDelayMax                           = 10
+)
+
+var (
+	wrongCodeChecksPerUID map[string]int
+	lastReset             int64
 )
 
 func (h *HttpEndpoints) AddCodeCheckerAPI(rg *gin.RouterGroup) {
@@ -56,27 +69,61 @@ func (h *HttpEndpoints) addNewEntryCodesHandl(c *gin.Context) {
 func (h *HttpEndpoints) validateEntryCodeHandl(c *gin.Context) {
 	instanceID := c.Param("instanceID")
 
+	uid := c.DefaultQuery("uid", "")
+	if uid == "" || len(uid) != 24 {
+		logger.Warning.Println("empty uid when checking entry code")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "wrong id"})
+		time.Sleep(time.Duration(rand.Intn(randomDelayMax)) * time.Second)
+		return
+	}
+
 	code := c.DefaultQuery("code", "")
 	if code == "" {
 		logger.Warning.Println("empty entry code attempt")
 		c.JSON(http.StatusBadRequest, gin.H{"error": "empty entry code attempt"})
+		time.Sleep(time.Duration(rand.Intn(randomDelayMax)) * time.Second)
 		return
 	}
-
 	code = strings.ReplaceAll(code, " ", "")
 	code = strings.ReplaceAll(code, "_", "")
 	code = strings.ReplaceAll(code, "-", "")
 
+	now := time.Now().Unix()
+	if now-lastReset > wrongCodeAttemptLimitWindowResetInterval {
+		wrongCodeChecksPerUID = map[string]int{}
+		lastReset = now
+	}
+
+	count, ok := wrongCodeChecksPerUID[uid]
+	if ok && count > wrongCodeAttemptLimit {
+		logger.Warning.Printf("%s too many wrong code attempts", uid)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "wrong entry code"})
+		time.Sleep(time.Duration(rand.Intn(randomDelayMax)) * time.Second)
+		return
+	}
+
 	codeInfos, err := h.dbService.FindEntryCodeInfo(instanceID, code)
 	if err != nil {
+		if !ok {
+			wrongCodeChecksPerUID[uid] = 1
+		} else {
+			wrongCodeChecksPerUID[uid] += 1
+		}
 		logger.Error.Printf("error when looking up code infos for '%s': %v", code, err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "wrong entry code"})
+		time.Sleep(time.Duration(rand.Intn(randomDelayMax)) * time.Second)
 		return
 	}
 
 	if codeInfos.UsedAt > 0 {
+		if !ok {
+			wrongCodeChecksPerUID[uid] = 1
+		} else {
+			wrongCodeChecksPerUID[uid] += 1
+		}
 		logger.Error.Printf("attempt to use expired code '%s': %v", code, codeInfos)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "wrong entry code"})
+		time.Sleep(time.Duration(rand.Intn(randomDelayMax)) * time.Second)
 		return
 	}
 
