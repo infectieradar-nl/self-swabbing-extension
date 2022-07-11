@@ -45,9 +45,11 @@ func main() {
 	apiRoot := router.Group("")
 
 	apiHandlers := handlers.NewHTTPHandler(
+		conf.InstanceID,
 		dbService,
 		conf.APIKeys,
 		conf.AllowEntryCodeUpload,
+		conf.SamplerConfig,
 	)
 	apiHandlers.AddCodeCheckerAPI(apiRoot)
 

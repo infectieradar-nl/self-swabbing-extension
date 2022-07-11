@@ -56,6 +56,14 @@ func (dbService *SelfSwabbingExtDBService) collectionRefEntryCodes(instanceID st
 	return dbService.DBClient.Database(dbService.DBNamePrefix + instanceID + "_self-swabbing-ext").Collection("entry-codes")
 }
 
+func (dbService *SelfSwabbingExtDBService) collectionRefSlotCurves(instanceID string) *mongo.Collection {
+	return dbService.DBClient.Database(dbService.DBNamePrefix + instanceID + "_self-swabbing-ext").Collection("slot-curves")
+}
+
+func (dbService *SelfSwabbingExtDBService) collectionRefUsedSlotsSince(instanceID string, ref time.Time) *mongo.Collection {
+	return dbService.DBClient.Database(dbService.DBNamePrefix + instanceID + "_self-swabbing-ext").Collection("used-slots")
+}
+
 // DB utils
 func (dbService *SelfSwabbingExtDBService) getContext() (ctx context.Context, cancel context.CancelFunc) {
 	return context.WithTimeout(context.Background(), time.Duration(dbService.timeout)*time.Second)

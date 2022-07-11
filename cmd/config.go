@@ -13,6 +13,7 @@ import (
 const (
 	ENV_GIN_DEBUG_MODE = "GIN_DEBUG_MODE"
 	ENV_LOG_LEVEL      = "LOG_LEVEL"
+	ENV_INSTANCE_ID    = "INSTANCE_ID"
 
 	ENV_SELF_SWABBING_EXTENSION_LISTEN_PORT = "SELF_SWABBING_EXT_LISTEN_PORT"
 	ENV_CORS_ALLOW_ORIGINS                  = "CORS_ALLOW_ORIGINS"
@@ -28,10 +29,15 @@ const (
 	ENV_DB_IDLE_CONN_TIMEOUT = "DB_IDLE_CONN_TIMEOUT"
 	ENV_DB_MAX_POOL_SIZE     = "DB_MAX_POOL_SIZE"
 	ENV_DB_NAME_PREFIX       = "DB_DB_NAME_PREFIX"
+
+	ENV_SAMPLE_FILE_PATH             = "SAMPLE_FILE_PATH"
+	ENV_TARGET_SAMPLE_COUNT          = "TARGET_SAMPLE_COUNT"
+	ENV_OPEN_SLOTS_AT_INTERVAL_START = "OPEN_SLOTS_AT_INTERVAL_START"
 )
 
 // Config is the structure that holds all global configuration data
 type Config struct {
+	InstanceID           string
 	GinDebugMode         bool
 	Port                 string
 	AllowOrigins         []string
@@ -39,10 +45,12 @@ type Config struct {
 	AllowEntryCodeUpload bool
 	LogLevel             logger.LogLevel
 	DBConfig             types.DBConfig
+	SamplerConfig        types.SamplerConfig
 }
 
 func initConfig() Config {
 	conf := Config{}
+	conf.InstanceID = os.Getenv(ENV_INSTANCE_ID)
 	conf.GinDebugMode = os.Getenv(ENV_GIN_DEBUG_MODE) == "true"
 	conf.Port = os.Getenv(ENV_SELF_SWABBING_EXTENSION_LISTEN_PORT)
 	conf.AllowOrigins = strings.Split(os.Getenv(ENV_CORS_ALLOW_ORIGINS), ",")
@@ -51,6 +59,7 @@ func initConfig() Config {
 
 	conf.LogLevel = getLogLevel()
 	conf.DBConfig = getDBConfig()
+	conf.SamplerConfig = getSamplerConfig()
 
 	return conf
 }
@@ -103,5 +112,25 @@ func getDBConfig() types.DBConfig {
 		IdleConnTimeout: IdleConnTimeout,
 		MaxPoolSize:     MaxPoolSize,
 		DBNamePrefix:    DBNamePrefix,
+	}
+}
+
+func getSamplerConfig() types.SamplerConfig {
+	fp := os.Getenv(ENV_SAMPLE_FILE_PATH)
+	if fp == "" {
+		logger.Error.Fatal("sample file path must not be empty")
+	}
+	ts, err := strconv.Atoi(os.Getenv(ENV_TARGET_SAMPLE_COUNT))
+	if err != nil {
+		logger.Error.Fatal(err.Error())
+	}
+	oss, err := strconv.Atoi(os.Getenv(ENV_OPEN_SLOTS_AT_INTERVAL_START))
+	if err != nil {
+		logger.Error.Fatal(err.Error())
+	}
+	return types.SamplerConfig{
+		SampleFilePath:   fp,
+		TargetSamples:    ts,
+		OpenSlotsAtStart: oss,
 	}
 }
