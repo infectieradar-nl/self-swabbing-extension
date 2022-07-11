@@ -29,6 +29,7 @@ func main() {
 	logger.Info.Println("Starting self-swabbing-extension")
 
 	dbService := db.NewSelfSwabbingExtDBService(conf.DBConfig)
+	dbService.CreateIndexesForSampler(conf.InstanceID)
 
 	// Start webserver
 	router := gin.Default()

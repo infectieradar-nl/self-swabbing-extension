@@ -60,7 +60,7 @@ func (dbService *SelfSwabbingExtDBService) collectionRefSlotCurves(instanceID st
 	return dbService.DBClient.Database(dbService.DBNamePrefix + instanceID + "_self-swabbing-ext").Collection("slot-curves")
 }
 
-func (dbService *SelfSwabbingExtDBService) collectionRefUsedSlotsSince(instanceID string, ref time.Time) *mongo.Collection {
+func (dbService *SelfSwabbingExtDBService) collectionRefUsedSlots(instanceID string) *mongo.Collection {
 	return dbService.DBClient.Database(dbService.DBNamePrefix + instanceID + "_self-swabbing-ext").Collection("used-slots")
 }
 

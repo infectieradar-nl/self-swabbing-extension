@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"github.com/coneno/logger"
 	"github.com/infectieradar-nl/self-swabbing-extension/pkg/db"
 	"github.com/infectieradar-nl/self-swabbing-extension/pkg/sampler"
 	"github.com/infectieradar-nl/self-swabbing-extension/pkg/types"
@@ -26,6 +27,11 @@ func NewHTTPHandler(
 	// in init:
 	s := sampler.NewSampler(instanceID, dbService)
 	s.LoadSlotCurveFromDB()
+	if s.NeedsRefresh() {
+		logger.Debug.Println("creating new slot curve from sample")
+		s.InitFromSampleCSV(samplerConfig.SampleFilePath, samplerConfig.TargetSamples, samplerConfig.OpenSlotsAtStart)
+		s.SaveSlotCurveToDB()
+	}
 
 	return &HttpEndpoints{
 		instanceID:           instanceID,
