@@ -2,7 +2,6 @@ package db
 
 import (
 	"errors"
-	"time"
 
 	"github.com/coneno/logger"
 	"github.com/infectieradar-nl/self-swabbing-extension/pkg/sampler"
@@ -52,29 +51,47 @@ func (dbService *SelfSwabbingExtDBService) CreateIndexesForSampler(instanceID st
 }
 
 func (dbService *SelfSwabbingExtDBService) LoadLatestSlotCurve(instanceID string) (res sampler.SlotCurve, err error) {
-	return res, errors.New("unimplemented")
+	ctx, cancel := dbService.getContext()
+	defer cancel()
+
+	filter := bson.M{}
+	opts := options.FindOne()
+	opts.SetSort(bson.D{{Key: "intervalStart", Value: -1}})
+
+	if err = dbService.collectionRefSlotCurves(instanceID).FindOne(
+		ctx,
+		filter,
+		opts,
+	).Decode(&res); err != nil {
+		return res, err
+	}
+	return res, nil
 }
 
-func (dbService *SelfSwabbingExtDBService) SaveNewSlotCurve(instanceID string, res sampler.SlotCurve) (err error) {
-	return errors.New("unimplemented")
+func (dbService *SelfSwabbingExtDBService) SaveNewSlotCurve(instanceID string, obj sampler.SlotCurve) (err error) {
+	ctx, cancel := dbService.getContext()
+	defer cancel()
+
+	_, err = dbService.collectionRefSlotCurves(instanceID).InsertOne(ctx, obj)
+	return err
 }
 
-func (dbService *SelfSwabbingExtDBService) GetUsedSlotsSince(instanceID string, ref time.Time) (count int, err error) {
-	return 0, errors.New("unimplemented")
+func (dbService *SelfSwabbingExtDBService) GetUsedSlotsSince(instanceID string, ref int64) (count int, err error) {
+	return 0, errors.New("TODO: unimplemented")
 }
 
 func (dbService *SelfSwabbingExtDBService) ReserveSlot(instanceID string, participantID string) error {
-	return errors.New("unimplemented")
+	return errors.New("TODO: unimplemented")
 }
 
 func (dbService *SelfSwabbingExtDBService) CancelSlotReservation(instanceID string, participantID string) error {
-	return errors.New("unimplemented")
+	return errors.New("TODO: unimplemented")
 }
 
 func (dbService *SelfSwabbingExtDBService) ConfirmSlot(instanceID string, participantID string) error {
-	return errors.New("unimplemented")
+	return errors.New("TODO: unimplemented")
 }
 
 func (dbService *SelfSwabbingExtDBService) CleanUpExpiredSlotReservations(instanceID string) error {
-	return errors.New("unimplemented")
+	return errors.New("TODO: unimplemented")
 }

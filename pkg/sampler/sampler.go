@@ -27,11 +27,11 @@ func (s Sampler) openSlotTargetNow() int {
 		return 0
 	}
 
-	currentT := int(time.Since(s.SlotCurve.IntervalStart).Seconds())
+	currentT := time.Now().Unix() - s.SlotCurve.IntervalStart
 
 	openSlots := s.SlotCurve.OpenSlots[0].Value
 	for _, slotTarget := range s.SlotCurve.OpenSlots {
-		if slotTarget.T > currentT {
+		if int64(slotTarget.T) > currentT {
 			break
 		}
 		openSlots = slotTarget.Value
@@ -112,7 +112,7 @@ func (s *Sampler) InitFromSampleCSV(filePath string, target int, minVal int) {
 }
 
 func (s Sampler) NeedsRefresh() bool {
-	sY, sW := s.SlotCurve.IntervalStart.ISOWeek()
+	sY, sW := time.Unix(s.SlotCurve.IntervalStart, 0).ISOWeek()
 	nY, nW := time.Now().ISOWeek()
 	if nY != sY || sW != nW {
 		return true
@@ -120,14 +120,14 @@ func (s Sampler) NeedsRefresh() bool {
 	return false
 }
 
-func getStartOfTheWeek() time.Time {
+func getStartOfTheWeek() int64 {
 	t := time.Now()
 	year, month, day := t.Date()
 	t = time.Date(year, month, day, 0, 0, 0, 0, time.Local)
 	for t.Weekday() != time.Monday { // iterate back to Monday
 		t = t.AddDate(0, 0, -1)
 	}
-	return t
+	return t.Unix()
 }
 
 func readCsvFile(filePath string) [][]string {
