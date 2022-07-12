@@ -24,5 +24,5 @@ type SlotCurve struct {
 type SamplerDBService interface {
 	LoadLatestSlotCurve(instanceID string) (res SlotCurve, err error)
 	SaveNewSlotCurve(instanceID string, res SlotCurve) (err error)
-	GetUsedSlotsSince(instanceID string, ref int64) (count int, err error)
+	GetUsedSlotsCountSince(instanceID string, ref int64) (count int64, err error)
 }

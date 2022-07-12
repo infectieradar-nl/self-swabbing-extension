@@ -1,7 +1,7 @@
 package db
 
 import (
-	"errors"
+	"time"
 
 	"github.com/coneno/logger"
 	"github.com/infectieradar-nl/self-swabbing-extension/pkg/sampler"
@@ -76,22 +76,89 @@ func (dbService *SelfSwabbingExtDBService) SaveNewSlotCurve(instanceID string, o
 	return err
 }
 
-func (dbService *SelfSwabbingExtDBService) GetUsedSlotsSince(instanceID string, ref int64) (count int, err error) {
-	return 0, errors.New("TODO: unimplemented")
+func (dbService *SelfSwabbingExtDBService) GetUsedSlotsCountSince(instanceID string, ref int64) (count int64, err error) {
+	ctx, cancel := dbService.getContext()
+	defer cancel()
+
+	filter := bson.M{
+		"time": bson.M{"$gt": ref},
+	}
+	count, err = dbService.collectionRefUsedSlots(instanceID).CountDocuments(ctx, filter)
+	return
 }
 
+type UsedSlot struct {
+	Time          int64  `bson:"time" json:"time"`
+	ParticipantID string `bson:"participantID" json:"participantID"`
+	Status        string `bson:"status" json:"status"`
+}
+
+const (
+	USED_SLOT_STATUS_RESERVED  = "reserved"
+	USED_SLOT_STATUS_CONFIRMED = "confirmed"
+)
+
 func (dbService *SelfSwabbingExtDBService) ReserveSlot(instanceID string, participantID string) error {
-	return errors.New("TODO: unimplemented")
+	ctx, cancel := dbService.getContext()
+	defer cancel()
+
+	newUsedSlot := UsedSlot{
+		Time:          time.Now().Unix(),
+		ParticipantID: participantID,
+		Status:        USED_SLOT_STATUS_RESERVED,
+	}
+
+	_, err := dbService.collectionRefUsedSlots(instanceID).InsertOne(ctx, newUsedSlot)
+	return err
 }
 
 func (dbService *SelfSwabbingExtDBService) CancelSlotReservation(instanceID string, participantID string) error {
-	return errors.New("TODO: unimplemented")
+	ctx, cancel := dbService.getContext()
+	defer cancel()
+
+	filter := bson.M{
+		"participantID": participantID,
+		"status":        USED_SLOT_STATUS_RESERVED,
+	}
+
+	var res UsedSlot
+	opts := options.FindOneAndDelete()
+	opts.SetSort(bson.D{{Key: "time", Value: -1}})
+	err := dbService.collectionRefUsedSlots(instanceID).FindOneAndDelete(ctx, filter, opts).Decode(&res)
+
+	return err
 }
 
 func (dbService *SelfSwabbingExtDBService) ConfirmSlot(instanceID string, participantID string) error {
-	return errors.New("TODO: unimplemented")
+	ctx, cancel := dbService.getContext()
+	defer cancel()
+
+	filter := bson.M{
+		"participantID": participantID,
+		"status":        USED_SLOT_STATUS_RESERVED,
+	}
+
+	update := bson.M{"$set": bson.M{"status": USED_SLOT_STATUS_CONFIRMED}}
+
+	var res UsedSlot
+	opts := options.FindOneAndUpdate()
+	opts.SetSort(bson.D{{Key: "time", Value: -1}})
+	err := dbService.collectionRefUsedSlots(instanceID).FindOneAndUpdate(ctx, filter, update, opts).Decode(&res)
+
+	return err
 }
 
 func (dbService *SelfSwabbingExtDBService) CleanUpExpiredSlotReservations(instanceID string) error {
-	return errors.New("TODO: unimplemented")
+	ctx, cancel := dbService.getContext()
+	defer cancel()
+
+	ref := time.Now().AddDate(0, 0, -7).Unix()
+	filter := bson.M{
+		"$and": bson.A{
+			bson.M{"time": bson.M{"$lt": ref}},
+			bson.M{"status": USED_SLOT_STATUS_RESERVED},
+		},
+	}
+	_, err := dbService.collectionRefUsedSlots(instanceID).DeleteMany(ctx, filter)
+	return err
 }

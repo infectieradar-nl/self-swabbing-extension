@@ -41,12 +41,12 @@ func (s Sampler) openSlotTargetNow() int {
 }
 
 func (s Sampler) getUsedSlotsCountNow() int {
-	count, err := s.dbService.GetUsedSlotsSince(s.instanceID, s.SlotCurve.IntervalStart)
+	count, err := s.dbService.GetUsedSlotsCountSince(s.instanceID, s.SlotCurve.IntervalStart)
 	if err != nil {
 		logger.Debug.Printf("error when fetching used slot count: %v", err)
 		return 0
 	}
-	return count
+	return int(count)
 }
 
 func (s Sampler) HasAvailableFreeSlots() bool {
