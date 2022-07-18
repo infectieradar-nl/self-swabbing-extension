@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"fmt"
-	"io/ioutil"
 	"math/rand"
 	"net/http"
 	"strings"
@@ -12,6 +11,8 @@ import (
 	"github.com/gin-gonic/gin"
 	mw "github.com/infectieradar-nl/self-swabbing-extension/pkg/http/middlewares"
 	"github.com/infectieradar-nl/self-swabbing-extension/pkg/types"
+	"github.com/infectieradar-nl/self-swabbing-extension/pkg/utils"
+	"github.com/influenzanet/study-service/pkg/studyengine"
 )
 
 const (
@@ -131,30 +132,46 @@ func (h *HttpEndpoints) validateEntryCodeHandl(c *gin.Context) {
 }
 
 func (h *HttpEndpoints) studyEventWithEntryCodeHandl(c *gin.Context) {
-	// TODO: receive and parse study event
-	// TODO: find survey item and response item with code
-	// TODO: update code in DB that is was used by participant
+	var req studyengine.ExternalEventPayload
+	if err := c.ShouldBindJSON(&req); err != nil {
+		logger.Error.Printf("error: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
 
-	resp, err := ioutil.ReadAll(c.Request.Body)
+	instanceID := req.InstanceID
+	if instanceID != h.instanceID {
+		msg := fmt.Sprintf("unexpected instanceID: %s", req.InstanceID)
+		logger.Error.Printf(msg)
+		c.JSON(http.StatusBadRequest, gin.H{"error": msg})
+		return
+	}
 
+	codeSurveyItem, err := utils.FindSurveyItemResponse(req.Response.Responses, "CodeVal")
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
-			"message": "Unable to read request body",
-		})
+		logger.Debug.Printf("%v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	err1 := ioutil.WriteFile("study_event.json", resp, 0644)
-
-	if err1 != nil {
-		fmt.Println("error:", err1)
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
-			"message": "Unable to save the file",
-		})
+	codeQuestionResponse, err := utils.FindResponseSlot(codeSurveyItem.Response, "rg.cv.ic")
+	if err != nil {
+		logger.Debug.Printf("%v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	// File saved successfully. Return proper result
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Your file has been successfully saved."})
+	codeValue := codeQuestionResponse.Value
+	if codeValue == "" {
+		logger.Error.Println("code value is empty")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "code value is empty"})
+		return
+	}
+
+	err = h.dbService.MarkEntryCodeAsUsed(h.instanceID, codeValue, req.ParticipantState.ParticipantID)
+	if err != nil {
+		logger.Error.Printf("%v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
 }

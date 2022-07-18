@@ -67,7 +67,10 @@ func (dbService *SelfSwabbingExtDBService) MarkEntryCodeAsUsed(instanceID string
 	defer cancel()
 
 	filter := bson.M{
-		"code": code,
+		"$and": bson.A{
+			bson.M{"code": code},
+			bson.M{"usedAt": bson.M{"$lt": 1}},
+		},
 	}
 	update := bson.M{"$set": bson.M{
 		"usedAt": time.Now().Unix(),
