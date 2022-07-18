@@ -102,13 +102,23 @@ func (dbService *SelfSwabbingExtDBService) ReserveSlot(instanceID string, partic
 	ctx, cancel := dbService.getContext()
 	defer cancel()
 
-	newUsedSlot := UsedSlot{
+	var newUsedSlot UsedSlot
+	filter := bson.M{
+		"participantID": participantID,
+		"status":        USED_SLOT_STATUS_RESERVED,
+	}
+	err := dbService.collectionRefUsedSlots(instanceID).FindOne(ctx, filter).Decode(&newUsedSlot)
+	if err == nil {
+		return nil
+	}
+
+	newUsedSlot = UsedSlot{
 		Time:          time.Now().Unix(),
 		ParticipantID: participantID,
 		Status:        USED_SLOT_STATUS_RESERVED,
 	}
 
-	_, err := dbService.collectionRefUsedSlots(instanceID).InsertOne(ctx, newUsedSlot)
+	_, err = dbService.collectionRefUsedSlots(instanceID).InsertOne(ctx, newUsedSlot)
 	return err
 }
 
