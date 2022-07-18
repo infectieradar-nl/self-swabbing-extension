@@ -7,6 +7,7 @@ import (
 	"github.com/coneno/logger"
 	"github.com/gin-gonic/gin"
 	mw "github.com/infectieradar-nl/self-swabbing-extension/pkg/http/middlewares"
+	"github.com/infectieradar-nl/self-swabbing-extension/pkg/utils"
 	"github.com/influenzanet/study-service/pkg/studyengine"
 )
 
@@ -81,6 +82,45 @@ func (h *HttpEndpoints) samplerInviteResponse(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": msg})
 		return
 	}
-	// if confirmed -> confirm slot
-	// if rejected -> remove reservation
+
+	confirmSurveyItem, err := utils.FindSurveyItemResponse(req.Response.Responses, "SwabSample.Confirm")
+	if err != nil {
+		logger.Debug.Printf("%v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	confirmedResponse, err := utils.FindResponseSlot(confirmSurveyItem.Response, "rg.scg")
+	if err != nil {
+		logger.Debug.Printf("%v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	logger.Debug.Println(confirmedResponse)
+
+	if len(confirmedResponse.Items) != 1 {
+		msg := fmt.Sprintf("unexpected rsponse slot info: %v", confirmedResponse)
+		logger.Error.Printf(msg)
+		c.JSON(http.StatusBadRequest, gin.H{"error": msg})
+		return
+	}
+
+	if confirmedResponse.Items[0].Key == "1" {
+		// Confirmed participation:
+		err := h.dbService.ConfirmSlot(instanceID, req.ParticipantState.ParticipantID)
+		if err != nil {
+			logger.Error.Printf("%v", err)
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+	} else {
+		// rejected participation:
+		err := h.dbService.CancelSlotReservation(instanceID, req.ParticipantState.ParticipantID)
+		if err != nil {
+			logger.Error.Printf("%v", err)
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+	}
 }
