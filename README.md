@@ -48,3 +48,6 @@
 - `OPEN_SLOTS_AT_INTERVAL_START`
   - number of open slots at the very beginning of the interval. This can be used as an offset to ensure particpants at the start of the interval also have chance to be included.
   - expected value: number, e.g., `5`
+- `MAX_PARTICIPANT_COUNT`
+  - number of maximum accepted participants, e.g., 50000
+  - used in the study event, to check if participant can enter the self swabbing study
