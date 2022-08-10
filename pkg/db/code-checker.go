@@ -62,6 +62,19 @@ func (dbService *SelfSwabbingExtDBService) FindEntryCodeInfo(instanceID string, 
 	return entryCode, err
 }
 
+func (dbService *SelfSwabbingExtDBService) CountUsedCodes(instanceID string) (count int64, err error) {
+	ctx, cancel := dbService.getContext()
+	defer cancel()
+
+	filter := bson.M{"usedAt": bson.M{"$gt": 1}}
+
+	count, err = dbService.collectionRefEntryCodes(instanceID).CountDocuments(
+		ctx,
+		filter,
+	)
+	return count, err
+}
+
 func (dbService *SelfSwabbingExtDBService) MarkEntryCodeAsUsed(instanceID string, code string, usedBy string) (err error) {
 	ctx, cancel := dbService.getContext()
 	defer cancel()

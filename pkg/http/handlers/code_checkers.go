@@ -34,6 +34,7 @@ func (h *HttpEndpoints) AddCodeCheckerAPI(rg *gin.RouterGroup) {
 		if h.allowEntryCodeUpload {
 			codeCheckGroup.POST("", mw.RequirePayload(), h.addNewEntryCodesHandl)
 		}
+		codeCheckGroup.POST("/is-study-full", h.isStudyFullEventHandl)
 		codeCheckGroup.GET("/is-valid", h.validateEntryCodeHandl)
 		codeCheckGroup.POST("/submit", mw.RequirePayload(), h.studyEventWithEntryCodeHandl)
 	}
@@ -174,4 +175,37 @@ func (h *HttpEndpoints) studyEventWithEntryCodeHandl(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+}
+
+func (h *HttpEndpoints) isStudyFullEventHandl(c *gin.Context) {
+	var req studyengine.ExternalEventPayload
+	if err := c.ShouldBindJSON(&req); err != nil {
+		logger.Error.Printf("error: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	instanceID := req.InstanceID
+	if instanceID != h.instanceID {
+		msg := fmt.Sprintf("unexpected instanceID: %s", req.InstanceID)
+		logger.Error.Printf(msg)
+		c.JSON(http.StatusBadRequest, gin.H{"error": msg})
+		return
+	}
+
+	// clean up unconfirmed reserved slots
+	count, err := h.dbService.CountUsedCodes(instanceID)
+	if err != nil {
+		logger.Error.Println(err)
+		c.JSON(http.StatusOK, gin.H{"value": false})
+		return
+	}
+	logger.Debug.Printf("number of participants currently: %d", count)
+
+	if count < h.samplerConfig.MaxNrOfParticipants {
+		c.JSON(http.StatusOK, gin.H{"value": false})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"value": true})
 }

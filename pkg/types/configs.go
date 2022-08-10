@@ -9,7 +9,8 @@ type DBConfig struct {
 }
 
 type SamplerConfig struct {
-	SampleFilePath   string
-	TargetSamples    int // maximum sample count target
-	OpenSlotsAtStart int // number of slots open at start of the sample interval
+	SampleFilePath      string
+	TargetSamples       int // maximum sample count target
+	OpenSlotsAtStart    int // number of slots open at start of the sample interval
+	MaxNrOfParticipants int64
 }

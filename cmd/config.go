@@ -33,6 +33,7 @@ const (
 	ENV_SAMPLE_FILE_PATH             = "SAMPLE_FILE_PATH"
 	ENV_TARGET_SAMPLE_COUNT          = "TARGET_SAMPLE_COUNT"
 	ENV_OPEN_SLOTS_AT_INTERVAL_START = "OPEN_SLOTS_AT_INTERVAL_START"
+	ENV_MAX_PARTICIPANT_COUNT        = "MAX_PARTICIPANT_COUNT"
 )
 
 // Config is the structure that holds all global configuration data
@@ -128,9 +129,16 @@ func getSamplerConfig() types.SamplerConfig {
 	if err != nil {
 		logger.Error.Fatal(err.Error())
 	}
+
+	mpc, err := strconv.Atoi(os.Getenv(ENV_MAX_PARTICIPANT_COUNT))
+	if err != nil {
+		logger.Error.Fatal(ENV_MAX_PARTICIPANT_COUNT + ": " + err.Error())
+	}
+
 	return types.SamplerConfig{
-		SampleFilePath:   fp,
-		TargetSamples:    ts,
-		OpenSlotsAtStart: oss,
+		SampleFilePath:      fp,
+		TargetSamples:       ts,
+		OpenSlotsAtStart:    oss,
+		MaxNrOfParticipants: int64(mpc),
 	}
 }
