@@ -123,4 +123,5 @@ func (h *HttpEndpoints) samplerInviteResponse(c *gin.Context) {
 			return
 		}
 	}
+	c.JSON(http.StatusOK, gin.H{"msg": "event processed successfully"})
 }
