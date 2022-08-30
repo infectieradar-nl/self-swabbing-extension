@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"math/rand"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/coneno/logger"
@@ -80,15 +79,13 @@ func (h *HttpEndpoints) validateEntryCodeHandl(c *gin.Context) {
 	}
 
 	code := c.DefaultQuery("code", "")
+	code = SanitizeCode(code)
 	if code == "" {
 		logger.Warning.Println("empty entry code attempt")
 		c.JSON(http.StatusBadRequest, gin.H{"error": "empty entry code attempt"})
 		time.Sleep(time.Duration(rand.Intn(randomDelayMax)) * time.Second)
 		return
 	}
-	code = strings.ReplaceAll(code, " ", "")
-	code = strings.ReplaceAll(code, "_", "")
-	code = strings.ReplaceAll(code, "-", "")
 
 	now := time.Now().Unix()
 	if now-lastReset > wrongCodeAttemptLimitWindowResetInterval {
@@ -163,6 +160,7 @@ func (h *HttpEndpoints) studyEventWithEntryCodeHandl(c *gin.Context) {
 	}
 
 	codeValue := codeQuestionResponse.Value
+	codeValue = SanitizeCode(codeValue)
 	if codeValue == "" {
 		logger.Error.Println("code value is empty")
 		c.JSON(http.StatusBadRequest, gin.H{"error": "code value is empty"})

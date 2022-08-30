@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/coneno/logger"
@@ -32,4 +33,11 @@ func RecordBodyHandl(c *gin.Context) {
 
 	// File saved successfully. Return proper result
 	c.JSON(http.StatusOK, gin.H{"message": "Your file has been successfully saved."})
+}
+
+func SanitizeCode(code string) string {
+	code = strings.ReplaceAll(code, " ", "")
+	code = strings.ReplaceAll(code, "_", "")
+	code = strings.ReplaceAll(code, "-", "")
+	return code
 }
