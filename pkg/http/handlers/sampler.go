@@ -16,10 +16,32 @@ func (h *HttpEndpoints) AddSamplerAPI(rg *gin.RouterGroup) {
 	samplerGroup.Use(mw.HasValidInstanceID())
 	samplerGroup.Use(mw.HasValidAPIKey(h.apiKeys))
 	{
+		samplerGroup.GET("/status", h.samplerGetStatus)
 		samplerGroup.POST("/is-selected", mw.RequirePayload(), h.samplerIsSelected)
 		samplerGroup.POST("/invite-response", mw.RequirePayload(), h.samplerInviteResponse)
 	}
 
+}
+
+func (h *HttpEndpoints) samplerGetStatus(c *gin.Context) {
+	instanceID := c.Param("instanceID")
+	if instanceID != h.instanceID {
+		msg := fmt.Sprintf("unexpected instanceID: %s", instanceID)
+		logger.Error.Printf(msg)
+		c.JSON(http.StatusBadRequest, gin.H{"error": msg})
+		return
+	}
+
+	// clean up unconfirmed reserved slots
+	if h.sampler.NeedsRefresh() {
+		logger.Debug.Println("creating new slot curve from sample")
+		h.sampler.InitFromSampleCSV(h.samplerConfig.SampleFilePath, h.samplerConfig.TargetSamples, h.samplerConfig.OpenSlotsAtStart)
+		h.sampler.SaveSlotCurveToDB()
+	}
+
+	infos := h.sampler.GetSamplerInfos()
+
+	c.JSON(http.StatusOK, infos)
 }
 
 func (h *HttpEndpoints) samplerIsSelected(c *gin.Context) {

@@ -57,6 +57,23 @@ func (s Sampler) HasAvailableFreeSlots() bool {
 	return availableSlots > 0
 }
 
+func (s Sampler) GetSamplerInfos() SampleInfos {
+	openSlotsTarget := s.openSlotTargetNow()
+	usedSlots := s.getUsedSlotsCountNow()
+	availableSlots := openSlotsTarget - usedSlots
+	currentT := time.Now().Unix() - s.SlotCurve.IntervalStart
+
+	maxSlots := s.SlotCurve.OpenSlots[len(s.SlotCurve.OpenSlots)-1].Value
+
+	return SampleInfos{
+		CurrentTime:     currentT,
+		OpenSlotsTarget: openSlotsTarget,
+		UsedSlots:       usedSlots,
+		AvailableSlots:  availableSlots,
+		MaxSlots:        maxSlots,
+	}
+}
+
 func (s *Sampler) LoadSlotCurveFromDB() {
 	sc, err := s.dbService.LoadLatestSlotCurve(s.instanceID)
 	if err != nil {

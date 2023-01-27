@@ -26,3 +26,11 @@ type SamplerDBService interface {
 	SaveNewSlotCurve(instanceID string, res SlotCurve) (err error)
 	GetUsedSlotsCountSince(instanceID string, ref int64) (count int64, err error)
 }
+
+type SampleInfos struct {
+	CurrentTime     int64 `json:"currentTimeInInterval"`
+	OpenSlotsTarget int   `json:"openSlotsTarget"`
+	UsedSlots       int   `json:"usedSlots"`
+	AvailableSlots  int   `json:"availableSlots"`
+	MaxSlots        int   `json:"maxSlots"`
+}
