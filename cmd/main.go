@@ -54,6 +54,7 @@ func main() {
 	)
 	apiHandlers.AddCodeCheckerAPI(apiRoot)
 	apiHandlers.AddSamplerAPI(apiRoot)
+	apiHandlers.AddStreptokidsAPI(apiRoot)
 
 	logger.Info.Printf("self swabbing extension is listening on port %s", conf.Port)
 	logger.Error.Fatal(router.Run(":" + conf.Port))

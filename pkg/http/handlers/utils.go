@@ -2,8 +2,9 @@ package handlers
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -12,7 +13,7 @@ import (
 )
 
 func RecordBodyHandl(c *gin.Context) {
-	req, err := ioutil.ReadAll(c.Request.Body)
+	req, err := io.ReadAll(c.Request.Body)
 
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
@@ -22,7 +23,7 @@ func RecordBodyHandl(c *gin.Context) {
 	}
 
 	filename := fmt.Sprintf("%s.json", time.Now().Format("2006-01-02-15-04-05"))
-	err = ioutil.WriteFile(filename, req, 0644)
+	err = os.WriteFile(filename, req, 0644)
 	if err != nil {
 		logger.Error.Println(err)
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
