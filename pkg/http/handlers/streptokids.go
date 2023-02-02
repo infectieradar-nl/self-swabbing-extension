@@ -4,14 +4,18 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/coneno/logger"
 	"github.com/gin-gonic/gin"
 	mw "github.com/infectieradar-nl/self-swabbing-extension/pkg/http/middlewares"
+	"github.com/infectieradar-nl/self-swabbing-extension/pkg/types"
 )
 
 const (
 	ENV_ALLOWED_REFERER_FOR_STREPTOKIDS_REG = "ALLOWED_REFERER_FOR_STREPTOKIDS_REG"
+	ENV_STREPTOKIDS_USERMANAGEMENT_URL      = "STREPTOKIDS_USERMANAGEMENT_URL"
+	ENV_STREPTOKIDS_MESSAGING_SERVICE_URL   = "STREPTOKIDS_MESSAGING_SERVICE_URL"
 )
 
 func (h *HttpEndpoints) AddStreptokidsAPI(rg *gin.RouterGroup,
@@ -44,11 +48,21 @@ func (h *HttpEndpoints) streptokidsRegisterNewParticipant(c *gin.Context) {
 		return
 	}
 
-	logger.Debug.Println()
-	// TODO: save new registration entry into db
-	// TODO: response with success
+	var req types.StreptokidsControlRegistration
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	req.SubmittedAt = time.Now().Unix()
 
+	_, err := h.dbService.StreptokidsAddControlContact(req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"msg": "contact saved"})
 }
+
 func (h *HttpEndpoints) streptokidsFetchRegistrations(c *gin.Context) {
 	// TODO:
 }

@@ -30,6 +30,7 @@ func main() {
 
 	dbService := db.NewSelfSwabbingExtDBService(conf.DBConfig)
 	dbService.CreateIndexesForSampler(conf.InstanceID)
+	dbService.CreateIndexesForStreptokids()
 
 	// Start webserver
 	router := gin.Default()
