@@ -1,6 +1,8 @@
 package db
 
 import (
+	"time"
+
 	"github.com/coneno/logger"
 	"github.com/infectieradar-nl/self-swabbing-extension/pkg/types"
 	"go.mongodb.org/mongo-driver/bson"
@@ -104,4 +106,41 @@ func (dbService *SelfSwabbingExtDBService) StreptokidsFetchControlContacts(since
 	}
 
 	return contacts, nil
+}
+
+func (dbService *SelfSwabbingExtDBService) StreptokidsFindOneControlContact(id string) (contact types.StreptokidsControlRegistration, err error) {
+	ctx, cancel := dbService.getContext()
+	defer cancel()
+
+	_id, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return contact, err
+	}
+	filter := bson.M{"_id": _id}
+
+	if err = dbService.collectionRefStreptokidsControls().FindOne(
+		ctx,
+		filter,
+		options.FindOne(),
+	).Decode(&contact); err != nil {
+		return contact, err
+	}
+
+	return contact, err
+}
+
+func (dbService *SelfSwabbingExtDBService) StreptokidsMarkControlContactInvited(id string) error {
+	ctx, cancel := dbService.getContext()
+	defer cancel()
+
+	_id, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return err
+	}
+	filter := bson.M{"_id": _id}
+	update := bson.M{"$set": bson.M{
+		"invitedAt": time.Now().Unix(),
+	}}
+	_, err = dbService.collectionRefStreptokidsControls().UpdateOne(ctx, filter, update)
+	return err
 }
