@@ -6,6 +6,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 func (dbService *SelfSwabbingExtDBService) collectionRefStreptokidsControls() *mongo.Collection {
@@ -61,4 +62,46 @@ func (dbService *SelfSwabbingExtDBService) StreptokidsAddControlContact(contact 
 	}
 	id := res.InsertedID.(primitive.ObjectID)
 	return id.Hex(), err
+}
+
+func (dbService *SelfSwabbingExtDBService) StreptokidsFetchControlContacts(since int64, includeInvited bool) (contacts []types.StreptokidsControlRegistration, err error) {
+	ctx, cancel := dbService.getContext()
+	defer cancel()
+
+	filter := bson.M{"submittedAt": bson.M{"$gt": since}}
+	if !includeInvited {
+		filter["invitedAt"] = bson.M{"$lt": 1}
+	}
+
+	opts := &options.FindOptions{
+		Sort: bson.D{
+			primitive.E{Key: "submittedAt", Value: -1},
+		},
+	}
+
+	cur, err := dbService.collectionRefStreptokidsControls().Find(
+		ctx,
+		filter,
+		opts,
+	)
+	if err != nil {
+		return contacts, err
+	}
+	defer cur.Close(ctx)
+
+	contacts = []types.StreptokidsControlRegistration{}
+	for cur.Next(ctx) {
+		var result types.StreptokidsControlRegistration
+		err := cur.Decode(&result)
+		if err != nil {
+			return contacts, err
+		}
+
+		contacts = append(contacts, result)
+	}
+	if err := cur.Err(); err != nil {
+		return contacts, err
+	}
+
+	return contacts, nil
 }
