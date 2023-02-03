@@ -10,3 +10,9 @@ type StreptokidsControlRegistration struct {
 	ControlResponse string             `bson:"controlResponse" json:"controlResponse"`
 	InvitedAt       int64              `bson:"invitedAt" json:"invitedAt"`
 }
+
+type StreptokidsControlCode struct {
+	ID        primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
+	Code      string             `bson:"code,omitempty" json:"code,omitempty"`
+	CreatedAt int64              `bson:"createdAt" json:"createdAt"`
+}

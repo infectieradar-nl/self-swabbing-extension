@@ -15,6 +15,10 @@ func (dbService *SelfSwabbingExtDBService) collectionRefStreptokidsControls() *m
 	return dbService.DBClient.Database(dbService.DBNamePrefix + "streptokids").Collection("control-contacts")
 }
 
+func (dbService *SelfSwabbingExtDBService) collectionRefStreptokidsControlCodes() *mongo.Collection {
+	return dbService.DBClient.Database(dbService.DBNamePrefix + "streptokids").Collection("control-codes")
+}
+
 func (dbService *SelfSwabbingExtDBService) CreateIndexesForStreptokids() {
 	ctx, cancel := dbService.getContext()
 	defer cancel()
@@ -46,6 +50,29 @@ func (dbService *SelfSwabbingExtDBService) CreateIndexesForStreptokids() {
 			Keys: bson.D{
 				{Key: "submittedAt", Value: -1},
 				{Key: "invitedAt", Value: 1},
+			},
+		},
+	)
+	if err != nil {
+		logger.Error.Println(err)
+	}
+
+	_, err = dbService.collectionRefStreptokidsControlCodes().Indexes().CreateOne(
+		ctx, mongo.IndexModel{
+			Keys: bson.M{
+				"code": 1,
+			},
+			Options: options.Index().SetUnique(true),
+		},
+	)
+	if err != nil {
+		logger.Error.Println(err)
+	}
+
+	_, err = dbService.collectionRefStreptokidsControlCodes().Indexes().CreateOne(
+		ctx, mongo.IndexModel{
+			Keys: bson.M{
+				"createdAt": 1,
 			},
 		},
 	)
@@ -143,4 +170,70 @@ func (dbService *SelfSwabbingExtDBService) StreptokidsMarkControlContactInvited(
 	}}
 	_, err = dbService.collectionRefStreptokidsControls().UpdateOne(ctx, filter, update)
 	return err
+}
+
+func (dbService *SelfSwabbingExtDBService) StreptokidsAddControlCode(code string) (string, error) {
+	ctx, cancel := dbService.getContext()
+	defer cancel()
+
+	newEntryCode := types.StreptokidsControlCode{
+		Code:      code,
+		CreatedAt: time.Now().Unix(),
+	}
+
+	res, err := dbService.collectionRefStreptokidsControlCodes().InsertOne(ctx, newEntryCode)
+	if err != nil {
+		return "", err
+	}
+	id := res.InsertedID.(primitive.ObjectID)
+	return id.Hex(), err
+}
+
+func (dbService *SelfSwabbingExtDBService) StreptokidsFindControlCode(code string) (entryCode types.StreptokidsControlCode, err error) {
+	ctx, cancel := dbService.getContext()
+	defer cancel()
+
+	filter := bson.M{
+		"code": code,
+	}
+
+	if err = dbService.collectionRefStreptokidsControlCodes().FindOne(
+		ctx,
+		filter,
+		options.FindOne(),
+	).Decode(&entryCode); err != nil {
+		return entryCode, err
+	}
+
+	return entryCode, err
+}
+
+func (dbService *SelfSwabbingExtDBService) StreptokidsDeleteContactsBefore(before int64) (count int64, err error) {
+	ctx, cancel := dbService.getContext()
+	defer cancel()
+
+	filter := bson.M{"submittedAt": bson.M{"$lt": before}}
+
+	res, err := dbService.collectionRefStreptokidsControls().DeleteMany(ctx, filter)
+	return res.DeletedCount, err
+}
+
+func (dbService *SelfSwabbingExtDBService) StreptokidsDeleteControlCodesBefore(before int64) (count int64, err error) {
+	ctx, cancel := dbService.getContext()
+	defer cancel()
+
+	filter := bson.M{"createdAt": bson.M{"$lt": before}}
+
+	res, err := dbService.collectionRefStreptokidsControlCodes().DeleteMany(ctx, filter)
+	return res.DeletedCount, err
+}
+
+func (dbService *SelfSwabbingExtDBService) StreptokidsDeleteControlCode(code string) (count int64, err error) {
+	ctx, cancel := dbService.getContext()
+	defer cancel()
+
+	filter := bson.M{"code": code}
+
+	res, err := dbService.collectionRefStreptokidsControlCodes().DeleteOne(ctx, filter)
+	return res.DeletedCount, err
 }
