@@ -2,7 +2,7 @@ package types
 
 import "go.mongodb.org/mongo-driver/bson/primitive"
 
-type StreptokidsControlRegistration struct {
+type IgasonderzoekControlRegistration struct {
 	ID              primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
 	SubmittedAt     int64              `bson:"submittedAt" json:"submittedAt"`
 	Email           string             `bson:"email" json:"email"`
@@ -11,7 +11,7 @@ type StreptokidsControlRegistration struct {
 	InvitedAt       int64              `bson:"invitedAt" json:"invitedAt"`
 }
 
-type StreptokidsControlCode struct {
+type IgasonderzoekControlCode struct {
 	ID        primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
 	Code      string             `bson:"code,omitempty" json:"code,omitempty"`
 	CreatedAt int64              `bson:"createdAt" json:"createdAt"`

@@ -30,7 +30,7 @@ func main() {
 
 	dbService := db.NewSelfSwabbingExtDBService(conf.DBConfig)
 	dbService.CreateIndexesForSampler(conf.InstanceID)
-	dbService.CreateIndexesForStreptokids()
+	dbService.CreateIndexesForIgasonderzoek()
 
 	// Start webserver
 	router := gin.Default()
@@ -55,7 +55,7 @@ func main() {
 	)
 	apiHandlers.AddCodeCheckerAPI(apiRoot)
 	apiHandlers.AddSamplerAPI(apiRoot)
-	apiHandlers.AddStreptokidsAPI(apiRoot)
+	apiHandlers.AddIgasonderzoekAPI(apiRoot)
 
 	logger.Info.Printf("self swabbing extension is listening on port %s", conf.Port)
 	logger.Error.Fatal(router.Run(":" + conf.Port))

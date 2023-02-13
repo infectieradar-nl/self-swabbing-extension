@@ -11,19 +11,19 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-func (dbService *SelfSwabbingExtDBService) collectionRefStreptokidsControls() *mongo.Collection {
-	return dbService.DBClient.Database(dbService.DBNamePrefix + "streptokids").Collection("control-contacts")
+func (dbService *SelfSwabbingExtDBService) collectionRefIgasonderzoekControls() *mongo.Collection {
+	return dbService.DBClient.Database(dbService.DBNamePrefix + "igasonderzoek").Collection("control-contacts")
 }
 
-func (dbService *SelfSwabbingExtDBService) collectionRefStreptokidsControlCodes() *mongo.Collection {
-	return dbService.DBClient.Database(dbService.DBNamePrefix + "streptokids").Collection("control-codes")
+func (dbService *SelfSwabbingExtDBService) collectionRefIgasonderzoekControlCodes() *mongo.Collection {
+	return dbService.DBClient.Database(dbService.DBNamePrefix + "igasonderzoek").Collection("control-codes")
 }
 
-func (dbService *SelfSwabbingExtDBService) CreateIndexesForStreptokids() {
+func (dbService *SelfSwabbingExtDBService) CreateIndexesForIgasonderzoek() {
 	ctx, cancel := dbService.getContext()
 	defer cancel()
 
-	_, err := dbService.collectionRefStreptokidsControls().Indexes().CreateOne(
+	_, err := dbService.collectionRefIgasonderzoekControls().Indexes().CreateOne(
 		ctx, mongo.IndexModel{
 			Keys: bson.M{
 				"invitedAt": -1,
@@ -34,7 +34,7 @@ func (dbService *SelfSwabbingExtDBService) CreateIndexesForStreptokids() {
 		logger.Error.Println(err)
 	}
 
-	_, err = dbService.collectionRefStreptokidsControls().Indexes().CreateOne(
+	_, err = dbService.collectionRefIgasonderzoekControls().Indexes().CreateOne(
 		ctx, mongo.IndexModel{
 			Keys: bson.M{
 				"submittedAt": 1,
@@ -45,7 +45,7 @@ func (dbService *SelfSwabbingExtDBService) CreateIndexesForStreptokids() {
 		logger.Error.Println(err)
 	}
 
-	_, err = dbService.collectionRefStreptokidsControls().Indexes().CreateOne(
+	_, err = dbService.collectionRefIgasonderzoekControls().Indexes().CreateOne(
 		ctx, mongo.IndexModel{
 			Keys: bson.D{
 				{Key: "submittedAt", Value: -1},
@@ -57,7 +57,7 @@ func (dbService *SelfSwabbingExtDBService) CreateIndexesForStreptokids() {
 		logger.Error.Println(err)
 	}
 
-	_, err = dbService.collectionRefStreptokidsControlCodes().Indexes().CreateOne(
+	_, err = dbService.collectionRefIgasonderzoekControlCodes().Indexes().CreateOne(
 		ctx, mongo.IndexModel{
 			Keys: bson.M{
 				"code": 1,
@@ -69,7 +69,7 @@ func (dbService *SelfSwabbingExtDBService) CreateIndexesForStreptokids() {
 		logger.Error.Println(err)
 	}
 
-	_, err = dbService.collectionRefStreptokidsControlCodes().Indexes().CreateOne(
+	_, err = dbService.collectionRefIgasonderzoekControlCodes().Indexes().CreateOne(
 		ctx, mongo.IndexModel{
 			Keys: bson.M{
 				"createdAt": 1,
@@ -81,11 +81,11 @@ func (dbService *SelfSwabbingExtDBService) CreateIndexesForStreptokids() {
 	}
 }
 
-func (dbService *SelfSwabbingExtDBService) StreptokidsAddControlContact(contact types.StreptokidsControlRegistration) (string, error) {
+func (dbService *SelfSwabbingExtDBService) IgasonderzoekAddControlContact(contact types.IgasonderzoekControlRegistration) (string, error) {
 	ctx, cancel := dbService.getContext()
 	defer cancel()
 
-	res, err := dbService.collectionRefStreptokidsControls().InsertOne(ctx, contact)
+	res, err := dbService.collectionRefIgasonderzoekControls().InsertOne(ctx, contact)
 	if err != nil {
 		return "", err
 	}
@@ -93,7 +93,7 @@ func (dbService *SelfSwabbingExtDBService) StreptokidsAddControlContact(contact 
 	return id.Hex(), err
 }
 
-func (dbService *SelfSwabbingExtDBService) StreptokidsFetchControlContacts(since int64, includeInvited bool) (contacts []types.StreptokidsControlRegistration, err error) {
+func (dbService *SelfSwabbingExtDBService) IgasonderzoekFetchControlContacts(since int64, includeInvited bool) (contacts []types.IgasonderzoekControlRegistration, err error) {
 	ctx, cancel := dbService.getContext()
 	defer cancel()
 
@@ -108,7 +108,7 @@ func (dbService *SelfSwabbingExtDBService) StreptokidsFetchControlContacts(since
 		},
 	}
 
-	cur, err := dbService.collectionRefStreptokidsControls().Find(
+	cur, err := dbService.collectionRefIgasonderzoekControls().Find(
 		ctx,
 		filter,
 		opts,
@@ -118,9 +118,9 @@ func (dbService *SelfSwabbingExtDBService) StreptokidsFetchControlContacts(since
 	}
 	defer cur.Close(ctx)
 
-	contacts = []types.StreptokidsControlRegistration{}
+	contacts = []types.IgasonderzoekControlRegistration{}
 	for cur.Next(ctx) {
-		var result types.StreptokidsControlRegistration
+		var result types.IgasonderzoekControlRegistration
 		err := cur.Decode(&result)
 		if err != nil {
 			return contacts, err
@@ -135,7 +135,7 @@ func (dbService *SelfSwabbingExtDBService) StreptokidsFetchControlContacts(since
 	return contacts, nil
 }
 
-func (dbService *SelfSwabbingExtDBService) StreptokidsFindOneControlContact(id string) (contact types.StreptokidsControlRegistration, err error) {
+func (dbService *SelfSwabbingExtDBService) IgasonderzoekFindOneControlContact(id string) (contact types.IgasonderzoekControlRegistration, err error) {
 	ctx, cancel := dbService.getContext()
 	defer cancel()
 
@@ -145,7 +145,7 @@ func (dbService *SelfSwabbingExtDBService) StreptokidsFindOneControlContact(id s
 	}
 	filter := bson.M{"_id": _id}
 
-	if err = dbService.collectionRefStreptokidsControls().FindOne(
+	if err = dbService.collectionRefIgasonderzoekControls().FindOne(
 		ctx,
 		filter,
 		options.FindOne(),
@@ -156,7 +156,7 @@ func (dbService *SelfSwabbingExtDBService) StreptokidsFindOneControlContact(id s
 	return contact, err
 }
 
-func (dbService *SelfSwabbingExtDBService) StreptokidsMarkControlContactInvited(id string) error {
+func (dbService *SelfSwabbingExtDBService) IgasonderzoekMarkControlContactInvited(id string) error {
 	ctx, cancel := dbService.getContext()
 	defer cancel()
 
@@ -168,20 +168,20 @@ func (dbService *SelfSwabbingExtDBService) StreptokidsMarkControlContactInvited(
 	update := bson.M{"$set": bson.M{
 		"invitedAt": time.Now().Unix(),
 	}}
-	_, err = dbService.collectionRefStreptokidsControls().UpdateOne(ctx, filter, update)
+	_, err = dbService.collectionRefIgasonderzoekControls().UpdateOne(ctx, filter, update)
 	return err
 }
 
-func (dbService *SelfSwabbingExtDBService) StreptokidsAddControlCode(code string) (string, error) {
+func (dbService *SelfSwabbingExtDBService) IgasonderzoekAddControlCode(code string) (string, error) {
 	ctx, cancel := dbService.getContext()
 	defer cancel()
 
-	newEntryCode := types.StreptokidsControlCode{
+	newEntryCode := types.IgasonderzoekControlCode{
 		Code:      code,
 		CreatedAt: time.Now().Unix(),
 	}
 
-	res, err := dbService.collectionRefStreptokidsControlCodes().InsertOne(ctx, newEntryCode)
+	res, err := dbService.collectionRefIgasonderzoekControlCodes().InsertOne(ctx, newEntryCode)
 	if err != nil {
 		return "", err
 	}
@@ -189,7 +189,7 @@ func (dbService *SelfSwabbingExtDBService) StreptokidsAddControlCode(code string
 	return id.Hex(), err
 }
 
-func (dbService *SelfSwabbingExtDBService) StreptokidsFindControlCode(code string) (entryCode types.StreptokidsControlCode, err error) {
+func (dbService *SelfSwabbingExtDBService) IgasonderzoekFindControlCode(code string) (entryCode types.IgasonderzoekControlCode, err error) {
 	ctx, cancel := dbService.getContext()
 	defer cancel()
 
@@ -197,7 +197,7 @@ func (dbService *SelfSwabbingExtDBService) StreptokidsFindControlCode(code strin
 		"code": code,
 	}
 
-	if err = dbService.collectionRefStreptokidsControlCodes().FindOne(
+	if err = dbService.collectionRefIgasonderzoekControlCodes().FindOne(
 		ctx,
 		filter,
 		options.FindOne(),
@@ -208,32 +208,32 @@ func (dbService *SelfSwabbingExtDBService) StreptokidsFindControlCode(code strin
 	return entryCode, err
 }
 
-func (dbService *SelfSwabbingExtDBService) StreptokidsDeleteContactsBefore(before int64) (count int64, err error) {
+func (dbService *SelfSwabbingExtDBService) IgasonderzoekDeleteContactsBefore(before int64) (count int64, err error) {
 	ctx, cancel := dbService.getContext()
 	defer cancel()
 
 	filter := bson.M{"submittedAt": bson.M{"$lt": before}}
 
-	res, err := dbService.collectionRefStreptokidsControls().DeleteMany(ctx, filter)
+	res, err := dbService.collectionRefIgasonderzoekControls().DeleteMany(ctx, filter)
 	return res.DeletedCount, err
 }
 
-func (dbService *SelfSwabbingExtDBService) StreptokidsDeleteControlCodesBefore(before int64) (count int64, err error) {
+func (dbService *SelfSwabbingExtDBService) IgasonderzoekDeleteControlCodesBefore(before int64) (count int64, err error) {
 	ctx, cancel := dbService.getContext()
 	defer cancel()
 
 	filter := bson.M{"createdAt": bson.M{"$lt": before}}
 
-	res, err := dbService.collectionRefStreptokidsControlCodes().DeleteMany(ctx, filter)
+	res, err := dbService.collectionRefIgasonderzoekControlCodes().DeleteMany(ctx, filter)
 	return res.DeletedCount, err
 }
 
-func (dbService *SelfSwabbingExtDBService) StreptokidsDeleteControlCode(code string) (count int64, err error) {
+func (dbService *SelfSwabbingExtDBService) IgasonderzoekDeleteControlCode(code string) (count int64, err error) {
 	ctx, cancel := dbService.getContext()
 	defer cancel()
 
 	filter := bson.M{"code": code}
 
-	res, err := dbService.collectionRefStreptokidsControlCodes().DeleteOne(ctx, filter)
+	res, err := dbService.collectionRefIgasonderzoekControlCodes().DeleteOne(ctx, filter)
 	return res.DeletedCount, err
 }

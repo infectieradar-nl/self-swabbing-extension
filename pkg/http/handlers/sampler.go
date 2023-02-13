@@ -85,7 +85,7 @@ func (h *HttpEndpoints) samplerIsSelected(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"value": false})
 		return
 	}
-
+	logger.Debug.Printf("participant %s was sampled", req.ParticipantState.ParticipantID)
 	c.JSON(http.StatusOK, gin.H{"value": true})
 }
 
@@ -122,11 +122,13 @@ func (h *HttpEndpoints) samplerInviteResponse(c *gin.Context) {
 	logger.Debug.Println(confirmedResponse)
 
 	if len(confirmedResponse.Items) != 1 {
-		msg := fmt.Sprintf("unexpected rsponse slot info: %v", confirmedResponse)
+		msg := fmt.Sprintf("unexpected response slot info: %v", confirmedResponse)
 		logger.Error.Printf(msg)
 		c.JSON(http.StatusBadRequest, gin.H{"error": msg})
 		return
 	}
+
+	logger.Debug.Printf("SwabSample invite response submitted by [%s] with selected option '%s'", req.ParticipantState.ParticipantID, confirmedResponse.Items[0].Key)
 
 	if confirmedResponse.Items[0].Key == "1" {
 		// Confirmed participation:
