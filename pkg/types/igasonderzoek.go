@@ -6,9 +6,16 @@ type IgasonderzoekControlRegistration struct {
 	ID              primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
 	SubmittedAt     int64              `bson:"submittedAt" json:"submittedAt"`
 	Email           string             `bson:"email" json:"email"`
-	Age             int                `bson:"age" json:"age"`
 	ControlResponse string             `bson:"controlResponse" json:"controlResponse"`
 	InvitedAt       int64              `bson:"invitedAt" json:"invitedAt"`
+	ControleCode    string             `bson:"controlCode" json:"controlCode"`
+	Children        []ChildInfos       `bson:"children" json:"children"`
+}
+
+type ChildInfos struct {
+	Birthyear  int    `bson:"birthyear" json:"birthyear"`
+	Birthmonth int    `bson:"birthmonth" json:"birthmonth"`
+	Gender     string `bson:"gender" json:"gender"`
 }
 
 type IgasonderzoekControlCode struct {

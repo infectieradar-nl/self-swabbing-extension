@@ -28,8 +28,12 @@ const (
 	ENV_ALLOWED_REFERER_FOR_IGASONDERZOEK_REG  = "ALLOWED_REFERER_FOR_IGASONDERZOEK_REG"
 	ENV_IGASONDERZOEK_USERMANAGEMENT_URL       = "IGASONDERZOEK_USERMANAGEMENT_URL"
 	ENV_IGASONDERZOEK_EMAIL_CLIENT_SERVICE_URL = "IGASONDERZOEK_EMAIL_CLIENT_SERVICE_URL"
-	ENV_IGASONDERZOEK_EMAIL_INVITE_SUBJECT     = "IGASONDERZOEK_EMAIL_INVITE_SUBJECT"
-	ENV_IGASONDERZOEK_PATH_TO_TEMPLATE_FILE    = "IGASONDERZOEK_PATH_TO_TEMPLATE_FILE"
+
+	ENV_IGASONDERZOEK_EMAIL_INVITE_SUBJECT  = "IGASONDERZOEK_EMAIL_INVITE_SUBJECT"
+	ENV_IGASONDERZOEK_PATH_TO_TEMPLATE_FILE = "IGASONDERZOEK_PATH_TO_TEMPLATE_FILE"
+
+	ENV_IGASONDERZOEK_EMAIL_RESULTS_SUBJECT         = "IGASONDERZOEK_EMAIL_RESULTS_SUBJECT"
+	ENV_IGASONDERZOEK_PATH_TO_RESULTS_TEMPLATE_FILE = "IGASONDERZOEK_PATH_TO_RESULTS_TEMPLATE_FILE"
 
 	DefaultGRPCMaxMsgSize = 4194304
 	maxCodeAge            = -14 * 24 * time.Hour
@@ -53,12 +57,12 @@ func (h *HttpEndpoints) AddIgasonderzoekAPI(rg *gin.RouterGroup) {
 	{
 		authGroup.GET("/registration", h.igasonderzoekFetchRegistrations) // ?since=1545345341&includeInvited=false
 		authGroup.POST("/invite", mw.RequirePayload(), h.igasonderzoekSendControlInvitations)
+		authGroup.POST("/send-results", mw.RequirePayload(), h.igasonderzoekSendResultsEmail)
 		authGroup.DELETE("/expired-registrations", h.igasonderzoekRemoveExpiredRegistrations)
 	}
 }
 
 func (h *HttpEndpoints) igasonderzoekRegisterNewParticipant(c *gin.Context) {
-
 	currentRef := c.Request.Referer()
 	if !hasAllowedReferer(currentRef) {
 		logger.Error.Printf("unexpected referer in the request: %s", currentRef)
@@ -140,12 +144,15 @@ func (h *HttpEndpoints) igasonderzoekControlAccessCodeUsed(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"msg": "code successfully deleted"})
 }
 
-type SendInviteToIDsReq struct {
-	IDs []string `json:"ids"`
+type SendMessageToReq struct {
+	Participants []struct {
+		Reference  string `json:"reference"`
+		ChildIndex int    `json:"childIndex"`
+	} `json:"participants"`
 }
 
 func (h *HttpEndpoints) igasonderzoekSendControlInvitations(c *gin.Context) {
-	var req SendInviteToIDsReq
+	var req SendMessageToReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -166,10 +173,11 @@ func (h *HttpEndpoints) igasonderzoekSendControlInvitations(c *gin.Context) {
 	}
 
 	count := 0
-	for _, id := range req.IDs {
-		contact, err := h.dbService.IgasonderzoekFindOneControlContact(id)
+
+	for _, pRef := range req.Participants {
+		contact, err := h.dbService.IgasonderzoekFindOneControlContact(pRef.Reference)
 		if err != nil {
-			logger.Error.Printf("igasonderzoek contact cannot be found: %s", id)
+			logger.Error.Printf("igasonderzoek contact cannot be found: %s", pRef.Reference)
 			continue
 		}
 
@@ -194,13 +202,19 @@ func (h *HttpEndpoints) igasonderzoekSendControlInvitations(c *gin.Context) {
 			break
 		}
 
+		if len(contact.Children) < pRef.ChildIndex+1 {
+			logger.Error.Printf("child index [%d] is invalid for contact %s", pRef.ChildIndex, pRef.Reference)
+			continue
+		}
+		child := contact.Children[pRef.ChildIndex]
+
 		content, err := ResolveTemplate(
 			"igasonderzoekInvite",
 			string(emailTemplate),
 			map[string]string{
 				"code":       code,
 				"codePretty": codePretty,
-				"age":        fmt.Sprintf("%d", contact.Age),
+				"birthyear":  fmt.Sprintf("%d", child.Birthyear),
 			},
 		)
 		if err != nil {
@@ -215,15 +229,76 @@ func (h *HttpEndpoints) igasonderzoekSendControlInvitations(c *gin.Context) {
 			Content: content,
 		})
 		if err != nil {
-			logger.Error.Printf("igasonderzoek contact message could not be sent for id %s: %v", id, err)
+			logger.Error.Printf("igasonderzoek contact message could not be sent for id %s: %v", pRef.Reference, err)
 			continue
 		}
 
 		count += 1
-		err = h.dbService.IgasonderzoekMarkControlContactInvited(id)
+		err = h.dbService.IgasonderzoekMarkControlContactInvited(pRef.Reference, code)
 		if err != nil {
-			logger.Error.Printf("igasonderzoek contact could not be marked as invited: %s", id)
+			logger.Error.Printf("igasonderzoek contact could not be marked as invited: %s", pRef.Reference)
 		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"msg":   "message sending finished",
+		"count": count,
+	})
+}
+
+func (h *HttpEndpoints) igasonderzoekSendResultsEmail(c *gin.Context) {
+	var req SendMessageToReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	token := c.MustGet("validatedToken").(*api_types.TokenInfos)
+	logger.Info.Printf("user %s initiated igasonderzoek result sending", token.Id)
+
+	emailClient, emailServiceClose := ConnectToEmailService(os.Getenv(ENV_IGASONDERZOEK_EMAIL_CLIENT_SERVICE_URL), DefaultGRPCMaxMsgSize)
+	defer emailServiceClose()
+
+	// read template file:
+	emailTemplate, err := os.ReadFile(os.Getenv(ENV_IGASONDERZOEK_PATH_TO_RESULTS_TEMPLATE_FILE))
+	if err != nil {
+		logger.Error.Printf("unexpected error: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	count := 0
+
+	for _, pRef := range req.Participants {
+		code := SanitizeCode(pRef.Reference)
+		contact, err := h.dbService.IgasonderzoekFindOneControlContactByUsedCode(code)
+		if err != nil {
+			logger.Error.Printf("igasonderzoek contact cannot be found by code: %s", code)
+			continue
+		}
+
+		content, err := ResolveTemplate(
+			"igasonderzoekResults",
+			string(emailTemplate),
+			map[string]string{},
+		)
+		if err != nil {
+			logger.Error.Printf("igasonderzoek contact message could not be generated: %v", err)
+			continue
+		}
+
+		// send email
+		_, err = emailClient.SendEmail(context.TODO(), &email_client_service.SendEmailReq{
+			To:      []string{contact.Email},
+			Subject: os.Getenv(ENV_IGASONDERZOEK_EMAIL_RESULTS_SUBJECT),
+			Content: content,
+		})
+		if err != nil {
+			logger.Error.Printf("igasonderzoek contact message could not be sent for code %s: %v", code, err)
+			continue
+		}
+
+		count += 1
 	}
 
 	c.JSON(http.StatusOK, gin.H{

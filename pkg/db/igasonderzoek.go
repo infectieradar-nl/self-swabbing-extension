@@ -57,6 +57,17 @@ func (dbService *SelfSwabbingExtDBService) CreateIndexesForIgasonderzoek() {
 		logger.Error.Println(err)
 	}
 
+	_, err = dbService.collectionRefIgasonderzoekControls().Indexes().CreateOne(
+		ctx, mongo.IndexModel{
+			Keys: bson.D{
+				{Key: "controlCode", Value: 1},
+			},
+		},
+	)
+	if err != nil {
+		logger.Error.Println(err)
+	}
+
 	_, err = dbService.collectionRefIgasonderzoekControlCodes().Indexes().CreateOne(
 		ctx, mongo.IndexModel{
 			Keys: bson.M{
@@ -156,7 +167,24 @@ func (dbService *SelfSwabbingExtDBService) IgasonderzoekFindOneControlContact(id
 	return contact, err
 }
 
-func (dbService *SelfSwabbingExtDBService) IgasonderzoekMarkControlContactInvited(id string) error {
+func (dbService *SelfSwabbingExtDBService) IgasonderzoekFindOneControlContactByUsedCode(code string) (contact types.IgasonderzoekControlRegistration, err error) {
+	ctx, cancel := dbService.getContext()
+	defer cancel()
+
+	filter := bson.M{"controlCode": code}
+
+	if err = dbService.collectionRefIgasonderzoekControls().FindOne(
+		ctx,
+		filter,
+		options.FindOne(),
+	).Decode(&contact); err != nil {
+		return contact, err
+	}
+
+	return contact, err
+}
+
+func (dbService *SelfSwabbingExtDBService) IgasonderzoekMarkControlContactInvited(id string, code string) error {
 	ctx, cancel := dbService.getContext()
 	defer cancel()
 
@@ -166,7 +194,8 @@ func (dbService *SelfSwabbingExtDBService) IgasonderzoekMarkControlContactInvite
 	}
 	filter := bson.M{"_id": _id}
 	update := bson.M{"$set": bson.M{
-		"invitedAt": time.Now().Unix(),
+		"invitedAt":   time.Now().Unix(),
+		"controlCode": code,
 	}}
 	_, err = dbService.collectionRefIgasonderzoekControls().UpdateOne(ctx, filter, update)
 	return err
