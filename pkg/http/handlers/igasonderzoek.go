@@ -17,8 +17,10 @@ import (
 	"github.com/gin-gonic/gin"
 	mw "github.com/infectieradar-nl/self-swabbing-extension/pkg/http/middlewares"
 	"github.com/infectieradar-nl/self-swabbing-extension/pkg/types"
+	"github.com/infectieradar-nl/self-swabbing-extension/pkg/utils"
 	"github.com/influenzanet/go-utils/pkg/api_types"
 	"github.com/influenzanet/messaging-service/pkg/api/email_client_service"
+	"github.com/influenzanet/study-service/pkg/studyengine"
 	umAPI "github.com/influenzanet/user-management-service/pkg/api"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/status"
@@ -46,6 +48,7 @@ func (h *HttpEndpoints) AddIgasonderzoekAPI(rg *gin.RouterGroup) {
 	g.Use(mw.HasValidAPIKey(h.apiKeys))
 	{
 		g.POST("/registration", mw.RequirePayload(), h.igasonderzoekRegisterNewParticipant)
+		g.POST("/save-case-contact", mw.RequirePayload(), h.saveCaseContactHandler)
 		g.GET("/check-code", h.igasonderzoekCheckControlAccessCode) // ?code=123123123132
 		g.GET("/code-used", h.igasonderzoekControlAccessCodeUsed)   // ?code=123123123132
 	}
@@ -455,4 +458,55 @@ func ResolveTemplate(tempName string, templateDef string, contentInfos map[strin
 		return "", err
 	}
 	return tpl.String(), nil
+}
+
+func (h *HttpEndpoints) saveCaseContactHandler(c *gin.Context) {
+	var req studyengine.ExternalEventPayload
+	if err := c.ShouldBindJSON(&req); err != nil {
+		logger.Error.Printf("error: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	instanceID := req.InstanceID
+	if instanceID != h.instanceID {
+		msg := fmt.Sprintf("unexpected instanceID: %s", req.InstanceID)
+		logger.Error.Printf(msg)
+		c.JSON(http.StatusBadRequest, gin.H{"error": msg})
+		return
+	}
+
+	emailItem, err := utils.FindSurveyItemResponse(req.Response.Responses, "email")
+	if err != nil {
+		logger.Debug.Printf("%v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	emailResponse, err := utils.FindResponseSlot(emailItem.Response, "rg.ic")
+	if err != nil {
+		logger.Debug.Printf("%v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	email := emailResponse.Value
+	if email == "" {
+		logger.Error.Println("email value is empty")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "email value is empty"})
+		return
+	}
+
+	var contactInfo types.IgasonderzoekControlRegistration
+	contactInfo.Email = email
+	contactInfo.ControleCode = SanitizeCode(req.ParticipantState.ParticipantID)
+	contactInfo.InvitedAt = 1
+	contactInfo.SubmittedAt = time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC).Unix()
+
+	_, err = h.dbService.IgasonderzoekAddControlContact(contactInfo)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"msg": "contact saved"})
 }
