@@ -276,8 +276,12 @@ func (h *HttpEndpoints) igasonderzoekSendResultsEmail(c *gin.Context) {
 		code := SanitizeCode(pRef.Reference)
 		contact, err := h.dbService.IgasonderzoekFindOneControlContactByUsedCode(code)
 		if err != nil {
-			logger.Error.Printf("igasonderzoek contact cannot be found by code: %s", code)
-			continue
+			logger.Debug.Printf("igasonderzoek contact cannot be found by code attempt to find by id: %s", code)
+			contact, err = h.dbService.IgasonderzoekFindOneControlContact(code)
+			if err != nil {
+				logger.Error.Printf("igasonderzoek contact cannot be found neither by code nor by id: %s", code)
+				continue
+			}
 		}
 
 		content, err := ResolveTemplate(
