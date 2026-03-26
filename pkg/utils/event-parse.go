@@ -4,8 +4,8 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/case-framework/case-backend/pkg/study/types"
 	"github.com/coneno/logger"
-	"github.com/influenzanet/study-service/pkg/types"
 )
 
 func FindSurveyItemResponse(response []types.SurveyItemResponse, itemKey string) (types.SurveyItemResponse, error) {
@@ -18,10 +18,16 @@ func FindSurveyItemResponse(response []types.SurveyItemResponse, itemKey string)
 }
 
 func FindResponseSlot(rootItem *types.ResponseItem, slotKey string) (*types.ResponseItem, error) {
+	if rootItem == nil {
+		return nil, errors.New("could not find response slot")
+	}
 	keyParts := strings.Split(slotKey, ".")
 	if len(keyParts) > 1 {
 		for _, item := range rootItem.Items {
-			res, err := FindResponseSlot(&item, strings.Join(keyParts[1:], "."))
+			if item == nil {
+				continue
+			}
+			res, err := FindResponseSlot(item, strings.Join(keyParts[1:], "."))
 			if err == nil {
 				return res, nil
 			}

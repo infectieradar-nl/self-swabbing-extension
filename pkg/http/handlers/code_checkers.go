@@ -6,12 +6,12 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/case-framework/case-backend/pkg/study/studyengine"
 	"github.com/coneno/logger"
 	"github.com/gin-gonic/gin"
 	mw "github.com/infectieradar-nl/self-swabbing-extension/pkg/http/middlewares"
 	"github.com/infectieradar-nl/self-swabbing-extension/pkg/types"
 	"github.com/infectieradar-nl/self-swabbing-extension/pkg/utils"
-	"github.com/influenzanet/study-service/pkg/studyengine"
 )
 
 const (
@@ -140,7 +140,7 @@ func (h *HttpEndpoints) studyEventWithEntryCodeHandl(c *gin.Context) {
 	instanceID := req.InstanceID
 	if instanceID != h.instanceID {
 		msg := fmt.Sprintf("unexpected instanceID: %s", req.InstanceID)
-		logger.Error.Printf(msg)
+		logger.Error.Println(msg)
 		c.JSON(http.StatusBadRequest, gin.H{"error": msg})
 		return
 	}
@@ -187,7 +187,7 @@ func (h *HttpEndpoints) isStudyFullEventHandl(c *gin.Context) {
 	instanceID := req.InstanceID
 	if instanceID != h.instanceID {
 		msg := fmt.Sprintf("unexpected instanceID: %s", req.InstanceID)
-		logger.Error.Printf(msg)
+		logger.Error.Println(msg)
 		c.JSON(http.StatusBadRequest, gin.H{"error": msg})
 		return
 	}
