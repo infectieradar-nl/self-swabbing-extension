@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/case-framework/case-backend/pkg/study/studyengine"
 	"github.com/coneno/logger"
 	"github.com/gin-gonic/gin"
 	mw "github.com/infectieradar-nl/self-swabbing-extension/pkg/http/middlewares"
 	"github.com/infectieradar-nl/self-swabbing-extension/pkg/utils"
-	"github.com/influenzanet/study-service/pkg/studyengine"
 )
 
 func (h *HttpEndpoints) AddSamplerAPI(rg *gin.RouterGroup) {
@@ -27,7 +27,7 @@ func (h *HttpEndpoints) samplerGetStatus(c *gin.Context) {
 	instanceID := c.Param("instanceID")
 	if instanceID != h.instanceID {
 		msg := fmt.Sprintf("unexpected instanceID: %s", instanceID)
-		logger.Error.Printf(msg)
+		logger.Error.Println(msg)
 		c.JSON(http.StatusBadRequest, gin.H{"error": msg})
 		return
 	}
@@ -55,7 +55,7 @@ func (h *HttpEndpoints) samplerIsSelected(c *gin.Context) {
 	instanceID := req.InstanceID
 	if instanceID != h.instanceID {
 		msg := fmt.Sprintf("unexpected instanceID: %s", req.InstanceID)
-		logger.Error.Printf(msg)
+		logger.Error.Println(msg)
 		c.JSON(http.StatusBadRequest, gin.H{"error": msg})
 		return
 	}
@@ -100,7 +100,7 @@ func (h *HttpEndpoints) samplerInviteResponse(c *gin.Context) {
 	instanceID := req.InstanceID
 	if instanceID != h.instanceID {
 		msg := fmt.Sprintf("unexpected instanceID: %s", req.InstanceID)
-		logger.Error.Printf(msg)
+		logger.Error.Println(msg)
 		c.JSON(http.StatusBadRequest, gin.H{"error": msg})
 		return
 	}
@@ -123,7 +123,7 @@ func (h *HttpEndpoints) samplerInviteResponse(c *gin.Context) {
 
 	if len(confirmedResponse.Items) != 1 {
 		msg := fmt.Sprintf("unexpected response slot info: %v", confirmedResponse)
-		logger.Error.Printf(msg)
+		logger.Error.Println(msg)
 		c.JSON(http.StatusBadRequest, gin.H{"error": msg})
 		return
 	}
