@@ -51,3 +51,20 @@
 - `MAX_PARTICIPANT_COUNT`
   - number of maximum accepted participants, e.g., 50000
   - used in the study event, to check if participant can enter the self swabbing study
+
+### Pienter selection
+
+The study rules check swabbing eligibility before calling `/sampler/:instanceID/is-selected`.
+The service reads the `pienter_sample` flag from the participant state sent by the
+study engine. If ordinary capacity is available, selection works as before. If
+capacity is exhausted, participants with that flag are still selected.
+
+Both routes reserve a slot in the same weekly budget. Pienter reservations can
+take the used count above the target and reduce capacity for subsequent ordinary
+selections. Confirmation, cancellation, expiry, and weekly rollover use the
+existing reservation flow.
+
+New `used-slots` records contain `selectionSource`: `random` when ordinary capacity
+was available, or `pienter` when the flag overrode the capacity check. Reusing an
+existing reservation preserves its source. Records created before this change
+have no source field and represent the previous ordinary selection flow.

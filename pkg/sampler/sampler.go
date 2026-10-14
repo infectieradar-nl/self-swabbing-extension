@@ -57,6 +57,23 @@ func (s Sampler) HasAvailableFreeSlots() bool {
 	return availableSlots > 0
 }
 
+// SelectParticipant reserves shared capacity, allowing Pienter cohort members
+// to exceed the current slot target when no ordinary capacity is available.
+func (s Sampler) SelectParticipant(participantID string, isPienter bool) (bool, error) {
+	selectionSource := SelectionSourceRandom
+	if !s.HasAvailableFreeSlots() {
+		if !isPienter {
+			return false, nil
+		}
+		selectionSource = SelectionSourcePienter
+	}
+
+	if err := s.dbService.ReserveSlot(s.instanceID, participantID, selectionSource); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
 func (s Sampler) GetSamplerInfos() SampleInfos {
 	openSlotsTarget := s.openSlotTargetNow()
 	usedSlots := s.getUsedSlotsCountNow()

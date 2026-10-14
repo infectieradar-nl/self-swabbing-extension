@@ -25,7 +25,13 @@ type SamplerDBService interface {
 	LoadLatestSlotCurve(instanceID string) (res SlotCurve, err error)
 	SaveNewSlotCurve(instanceID string, res SlotCurve) (err error)
 	GetUsedSlotsCountSince(instanceID string, ref int64) (count int64, err error)
+	ReserveSlot(instanceID string, participantID string, selectionSource string) error
 }
+
+const (
+	SelectionSourceRandom  = "random"
+	SelectionSourcePienter = "pienter"
+)
 
 type SampleInfos struct {
 	CurrentTime     int64 `json:"currentTimeInInterval"`
