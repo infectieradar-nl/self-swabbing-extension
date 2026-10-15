@@ -88,10 +88,9 @@ func (dbService *SelfSwabbingExtDBService) GetUsedSlotsCountSince(instanceID str
 }
 
 type UsedSlot struct {
-	Time            int64  `bson:"time" json:"time"`
-	ParticipantID   string `bson:"participantID" json:"participantID"`
-	Status          string `bson:"status" json:"status"`
-	SelectionSource string `bson:"selectionSource,omitempty" json:"selectionSource,omitempty"`
+	Time          int64  `bson:"time" json:"time"`
+	ParticipantID string `bson:"participantID" json:"participantID"`
+	Status        string `bson:"status" json:"status"`
 }
 
 const (
@@ -99,7 +98,7 @@ const (
 	USED_SLOT_STATUS_CONFIRMED = "confirmed"
 )
 
-func (dbService *SelfSwabbingExtDBService) ReserveSlot(instanceID string, participantID string, selectionSource string) error {
+func (dbService *SelfSwabbingExtDBService) ReserveSlot(instanceID string, participantID string) error {
 	ctx, cancel := dbService.getContext()
 	defer cancel()
 
@@ -112,15 +111,11 @@ func (dbService *SelfSwabbingExtDBService) ReserveSlot(instanceID string, partic
 	if err == nil {
 		return nil
 	}
-	if err != mongo.ErrNoDocuments {
-		return err
-	}
 
 	newUsedSlot = UsedSlot{
-		Time:            time.Now().Unix(),
-		ParticipantID:   participantID,
-		Status:          USED_SLOT_STATUS_RESERVED,
-		SelectionSource: selectionSource,
+		Time:          time.Now().Unix(),
+		ParticipantID: participantID,
+		Status:        USED_SLOT_STATUS_RESERVED,
 	}
 
 	_, err = dbService.collectionRefUsedSlots(instanceID).InsertOne(ctx, newUsedSlot)

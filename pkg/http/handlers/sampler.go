@@ -72,15 +72,16 @@ func (h *HttpEndpoints) samplerIsSelected(c *gin.Context) {
 		h.sampler.SaveSlotCurveToDB()
 	}
 
-	_, isPienter := req.ParticipantState.Flags["pienter_sample"]
-	selected, err := h.sampler.SelectParticipant(req.ParticipantState.ParticipantID, isPienter)
-	if err != nil {
-		logger.Error.Println(err)
+	if !h.sampler.HasAvailableFreeSlots() {
+		logger.Debug.Println("no free slots available")
 		c.JSON(http.StatusOK, gin.H{"value": false})
 		return
 	}
-	if !selected {
-		logger.Debug.Println("no free slots available")
+
+	// reserve slot:
+	err = h.dbService.ReserveSlot(instanceID, req.ParticipantState.ParticipantID)
+	if err != nil {
+		logger.Error.Println(err)
 		c.JSON(http.StatusOK, gin.H{"value": false})
 		return
 	}
